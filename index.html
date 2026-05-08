@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pink Disco Dance Battle</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, Helvetica, sans-serif;
+    color: white;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255,255,255,.8) 0 2px, transparent 3px 8px),
+      radial-gradient(circle at top, #ffd1ec, #ff5fba 38%, #7c3aed 100%);
+    overflow: hidden;
+  }
+
+  .game {
+    width: 100vw;
+    height: 100vh;
+    padding: 18px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 14px;
+  }
+
+  header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .player-card, .timer-card {
+    background: rgba(255,255,255,.18);
+    border: 4px solid white;
+    border-radius: 22px;
+    padding: 12px 18px;
+    box-shadow: 0 8px 0 rgba(0,0,0,.35);
+    backdrop-filter: blur(6px);
+  }
+
+  .player-card.right { text-align: right; }
+
+  .label {
+    font-size: 18px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .score {
+    font-size: 42px;
+    font-weight: 900;
+    line-height: 1;
+    margin-top: 6px;
+  }
+
+  .timer-card {
+    min-width: 260px;
+    text-align: center;
+    background: rgba(17,24,39,.82);
+  }
+
+  #timer {
+    font-size: 48px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  #status {
+    margin-top: 4px;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  #speedLabel {
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 900;
+    opacity: .9;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    min-height: 0;
+  }
+
+  .side {
+    position: relative;
+    overflow: hidden;
+    border: 5px solid white;
+    border-radius: 28px;
+    background:
+      linear-gradient(90deg, rgba(255,255,255,.08) 24%, transparent 25% 49%, rgba(255,255,255,.08) 50% 74%, transparent 75%),
+      linear-gradient(180deg, rgba(255,255,255,.18), rgba(0,0,0,.18));
+    box-shadow: inset 0 0 40px rgba(255,255,255,.16), 0 10px 0 rgba(0,0,0,.35);
+  }
+
+  .side-title {
+    position: absolute;
+    top: 14px;
+    left: 16px;
+    z-index: 5;
+    font-size: 22px;
+    font-weight: 900;
+    background: rgba(17,24,39,.7);
+    border: 3px solid white;
+    border-radius: 999px;
+    padding: 8px 14px;
+  }
+
+  .lane-labels {
+    position: absolute;
+    top: 70px;
+    left: 0;
+    right: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    text-align: center;
+    font-size: 18px;
+    font-weight: 900;
+    opacity: .78;
+    z-index: 2;
+  }
+
+  .hit-zone {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 92px;
+    height: 92px;
+    background: rgba(255,255,255,.25);
+    border-top: 7px solid #fff;
+    border-bottom: 7px solid #fff;
+    box-shadow: 0 0 30px rgba(255,255,255,.65), inset 0 0 28px rgba(255,255,255,.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+
+  .hit-zone span {
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: white;
+    text-shadow: 0 4px 0 rgba(0,0,0,.35);
+    background: rgba(255,20,147,.58);
+    border: 3px solid white;
+    border-radius: 999px;
+    padding: 8px 24px;
+  }
+
+  .falling {
+    position: absolute;
+    width: 92px;
+    height: 92px;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 68px;
+    font-weight: 900;
+    color: white;
+    background: linear-gradient(145deg, #ff1493, #be185d);
+    border: 6px solid white;
+    box-shadow: 0 9px 0 rgba(0,0,0,.45), 0 0 22px rgba(255,255,255,.55);
+    text-shadow: 0 4px 0 rgba(0,0,0,.35);
+    z-index: 4;
+    transform: translateX(-50%);
+  }
+
+  .falling.ready {
+    background: linear-gradient(145deg, #fde047, #f97316);
+    box-shadow: 0 9px 0 rgba(0,0,0,.45), 0 0 34px rgba(255,255,255,.95);
+  }
+
+  .feedback {
+    position: absolute;
+    left: 50%;
+    top: 48%;
+    transform: translate(-50%, -50%);
+    font-size: 44px;
+    font-weight: 900;
+    text-shadow: 0 4px 0 rgba(0,0,0,.4);
+    opacity: 0;
+    z-index: 8;
+    pointer-events: none;
+  }
+
+  .feedback.show { animation: pop .5s ease-out; }
+
+  @keyframes pop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.65); }
+    25% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+    100% { opacity: 0; transform: translate(-50%, -80%) scale(1.25); }
+  }
+
+  .disco-ball {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 58px;
+    height: 58px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background:
+      linear-gradient(90deg, transparent 46%, rgba(255,255,255,.75) 48% 52%, transparent 54%),
+      linear-gradient(0deg, transparent 46%, rgba(255,255,255,.75) 48% 52%, transparent 54%),
+      radial-gradient(circle at 30% 25%, #fff, #ffc4eb 35%, #ff4db8 70%);
+    border: 3px solid white;
+    box-shadow: 0 0 26px rgba(255,255,255,.8);
+    animation: spin 3s linear infinite;
+    z-index: 6;
+  }
+
+  @keyframes spin {
+    from { transform: translateX(-50%) rotate(0deg); }
+    to { transform: translateX(-50%) rotate(360deg); }
+  }
+
+  footer {
+    display: grid;
+    grid-template-columns: auto auto auto 1fr;
+    align-items: center;
+    gap: 12px;
+  }
+
+  button, select {
+    font-size: 20px;
+    font-weight: 900;
+    padding: 11px 20px;
+    border: 4px solid white;
+    border-radius: 18px;
+    color: #831843;
+    background: #fff;
+    box-shadow: 0 8px 0 rgba(0,0,0,.35);
+    cursor: pointer;
+  }
+
+  select {
+    min-width: 170px;
+  }
+
+  button:active { transform: translateY(5px); box-shadow: 0 3px 0 rgba(0,0,0,.35); }
+  button:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
+
+  .help {
+    font-size: 15px;
+    font-weight: 800;
+    text-align: center;
+    text-shadow: 0 2px 0 rgba(0,0,0,.3);
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    background: rgba(17,24,39,.78);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: clamp(64px, 10vw, 120px);
+    font-weight: 900;
+  }
+
+  .overlay.small {
+    font-size: clamp(34px, 6vw, 72px);
+    line-height: 1.1;
+  }
+
+  .overlay span {
+    display: block;
+    font-size: 24px;
+    margin-top: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="game">
+  <header>
+    <div class="player-card">
+      <div class="label">Player 1 • Arrow Keys</div>
+      <div id="score1" class="score">0</div>
+    </div>
+
+    <div class="timer-card">
+      <div id="timer">60</div>
+      <div id="status">Ready</div>
+      <div id="speedLabel">Speed: Normal</div>
+    </div>
+
+    <div class="player-card right">
+      <div class="label">Player 2 • W A S D</div>
+      <div id="score2" class="score">0</div>
+    </div>
+  </header>
+
+  <main class="board">
+    <section class="side" id="side1">
+      <div class="disco-ball"></div>
+      <div class="side-title">Player 1</div>
+      <div class="lane-labels"><div>UP</div><div>RIGHT</div><div>DOWN</div><div>LEFT</div></div>
+      <div class="hit-zone"><span>HIT ZONE</span></div>
+      <div class="feedback" id="feedback1">HIT!</div>
+    </section>
+
+    <section class="side" id="side2">
+      <div class="disco-ball"></div>
+      <div class="side-title">Player 2</div>
+      <div class="lane-labels"><div>UP</div><div>RIGHT</div><div>DOWN</div><div>LEFT</div></div>
+      <div class="hit-zone"><span>HIT ZONE</span></div>
+      <div class="feedback" id="feedback2">HIT!</div>
+    </section>
+  </main>
+
+  <footer>
+    <div id="songButtons" style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+      <button class="song-btn" data-song="bluey.mp3">Bluey</button>
+      <button class="song-btn" data-song="firework.mp3">Firework</button>
+      <button class="song-btn" data-song="rickroll.mp3">Rick Roll</button>
+      <button class="song-btn" data-song="ymca.mp3">YMCA</button>
+      <button class="song-btn" data-song="lushlife.mp3">Lush Life</button>
+    </div>
+    <button id="startBtn">Start Game</button>
+    <button id="resetBtn">Stop / Reset</button>
+    <select id="speedSelect" aria-label="Choose game speed">
+      <option value="easy">Easy</option>
+      <option value="normal" selected>Normal</option>
+      <option value="challenge">Challenge</option>
+      <option value="chaos">Chaos</option>
+    </select>
+    <button id="musicBtn">Music: On</button>
+    <button id="testMusicBtn">Test Music</button>
+    <div class="help">Upload these files into the same GitHub folder as index.html: <b>bluey.mp3</b>, <b>firework.mp3</b>, <b>rickroll.mp3</b>, <b>ymca.mp3</b>, and <b>lushlife.mp3</b>.</div>
+  </footer>
+</div>
+
+<audio id="gameMusic" preload="auto">
+  <source src="song.mp3" type="audio/mpeg">
+  <source src="song.mp3.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+const GAME_SECONDS = 60;
+const COUNTDOWN_SECONDS = 3;
+const HIT_ZONE_BOTTOM = 92;
+const HIT_ZONE_HEIGHT = 92;
+const ARROW_SIZE = 92;
+
+const SPEEDS = {
+  easy: { label: 'Easy', fallSpeed: 125, spawnInterval: 1250 },
+  normal: { label: 'Normal', fallSpeed: 165, spawnInterval: 1050 },
+  challenge: { label: 'Challenge', fallSpeed: 215, spawnInterval: 850 },
+  chaos: { label: 'Chaos', fallSpeed: 265, spawnInterval: 650 }
+};
+
+const directions = [
+  { name: 'up', symbol: '↑', p1: 'ArrowUp', p2: 'w', lane: 0 },
+  { name: 'right', symbol: '→', p1: 'ArrowRight', p2: 'd', lane: 1 },
+  { name: 'down', symbol: '↓', p1: 'ArrowDown', p2: 's', lane: 2 },
+  { name: 'left', symbol: '←', p1: 'ArrowLeft', p2: 'a', lane: 3 }
+];
+
+const state = {
+  running: false,
+  countdown: false,
+  musicOn: true,
+  currentSpeed: SPEEDS.normal,
+  score1: 0,
+  score2: 0,
+  seconds: GAME_SECONDS,
+  arrows1: [],
+  arrows2: [],
+  lastFrame: null,
+  spawnTimer: null,
+  gameTimer: null
+};
+
+const score1 = document.getElementById('score1');
+const score2 = document.getElementById('score2');
+const timer = document.getElementById('timer');
+const status = document.getElementById('status');
+const speedLabel = document.getElementById('speedLabel');
+const songButtons = document.querySelectorAll('.song-btn');
+let selectedSong = 'bluey.mp3';
+const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
+const speedSelect = document.getElementById('speedSelect');
+const musicBtn = document.getElementById('musicBtn');
+const testMusicBtn = document.getElementById('testMusicBtn');
+const music = document.getElementById('gameMusic');
+const side1 = document.getElementById('side1');
+const side2 = document.getElementById('side2');
+const feedback1 = document.getElementById('feedback1');
+const feedback2 = document.getElementById('feedback2');
+
+music.volume = 0.55;
+
+music.addEventListener('error', () => {
+  status.textContent = 'Music File Not Found';
+});
+
+music.addEventListener('canplaythrough', () => {
+  if (!state.running && !state.countdown) {
+    status.textContent = 'Music Ready';
+  }
+});
+
+function setSpeed() {
+  state.currentSpeed = SPEEDS[speedSelect.value];
+  speedLabel.textContent = 'Speed: ' + state.currentSpeed.label;
+}
+
+function resetGame() {
+  clearInterval(state.spawnTimer);
+  clearInterval(state.gameTimer);
+  clearArrows();
+  removeOverlay(side1);
+  removeOverlay(side2);
+  stopMusic();
+  state.running = false;
+  state.countdown = false;
+  state.score1 = 0;
+  state.score2 = 0;
+  state.seconds = GAME_SECONDS;
+  score1.textContent = '0';
+  score2.textContent = '0';
+  timer.textContent = GAME_SECONDS;
+  status.textContent = 'Ready';
+  startBtn.disabled = false;
+  speedSelect.disabled = false;
+  musicBtn.disabled = false;
+  testMusicBtn.disabled = false;
+  songButtons.forEach(btn => {
+  if (btn.dataset.song === selectedSong) {
+    btn.style.background = '#f9a8d4';
+  }
+
+  btn.addEventListener('click', () => {
+    songButtons.forEach(b => b.style.background = '#fff');
+    btn.style.background = '#f9a8d4';
+    selectedSong = btn.dataset.song;
+    status.textContent = 'Song: ' + btn.textContent;
+  });
+});
+
+setSpeed();
+}
+
+function clearArrows() {
+  [...state.arrows1, ...state.arrows2].forEach(a => a.el.remove());
+  state.arrows1 = [];
+  state.arrows2 = [];
+}
+
+function showOverlay(side, text, small=false) {
+  removeOverlay(side);
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay' + (small ? ' small' : '');
+  overlay.innerHTML = text;
+  side.appendChild(overlay);
+}
+
+function removeOverlay(side) {
+  const overlay = side.querySelector('.overlay');
+  if (overlay) overlay.remove();
+}
+
+function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+async function startCountdown() {
+  resetGame();
+  state.countdown = true;
+  startBtn.disabled = true;
+  speedSelect.disabled = true;
+  musicBtn.disabled = true;
+  testMusicBtn.disabled = true;
+
+  // Start music immediately from the button click.
+  // Browsers often block audio if it waits until after the countdown.
+  startMusic();
+
+  for (let i = COUNTDOWN_SECONDS; i > 0; i--) {
+    timer.textContent = i;
+    status.textContent = 'Get Ready';
+    showOverlay(side1, i);
+    showOverlay(side2, i);
+    await wait(1000);
+  }
+
+  showOverlay(side1, 'GO!');
+  showOverlay(side2, 'GO!');
+  status.textContent = 'Dance!';
+  await wait(500);
+  removeOverlay(side1);
+  removeOverlay(side2);
+  state.countdown = false;
+  startGame();
+}
+
+function startMusic() {
+  if (!state.musicOn) return;
+  music.src = selectedSong;
+  music.pause();
+  music.load();
+  music.currentTime = 0;
+  music.volume = 0.55;
+  music.play().then(() => {
+    status.textContent = 'Dance!';
+  }).catch(() => {
+    status.textContent = 'Click Test Music';
+  });
+}
+
+function stopMusic() {
+  music.pause();
+  music.currentTime = 0;
+}
+
+function startGame() {
+  state.running = true;
+  state.seconds = GAME_SECONDS;
+  timer.textContent = GAME_SECONDS;
+  state.lastFrame = performance.now();
+
+  state.spawnTimer = setInterval(() => {
+    spawnArrow(1);
+    spawnArrow(2);
+  }, state.currentSpeed.spawnInterval);
+
+  state.gameTimer = setInterval(() => {
+    state.seconds--;
+    timer.textContent = state.seconds;
+    if (state.seconds <= 0) endGame();
+  }, 1000);
+
+  requestAnimationFrame(updateGame);
+}
+
+function endGame() {
+  state.running = false;
+  clearInterval(state.spawnTimer);
+  clearInterval(state.gameTimer);
+  stopMusic();
+  startBtn.disabled = false;
+  speedSelect.disabled = false;
+  musicBtn.disabled = false;
+  testMusicBtn.disabled = false;
+  status.textContent = 'Game Over';
+
+  let message;
+  if (state.score1 > state.score2) message = `Player 1 Wins!<span>${state.score1} to ${state.score2}</span>`;
+  else if (state.score2 > state.score1) message = `Player 2 Wins!<span>${state.score2} to ${state.score1}</span>`;
+  else message = `Tie Game!<span>${state.score1} to ${state.score2}</span>`;
+
+  showOverlay(side1, message, true);
+  showOverlay(side2, message, true);
+}
+
+function spawnArrow(player) {
+  const side = player === 1 ? side1 : side2;
+  const list = player === 1 ? state.arrows1 : state.arrows2;
+  const direction = directions[Math.floor(Math.random() * directions.length)];
+  const laneWidth = side.clientWidth / 4;
+  const x = laneWidth * direction.lane + laneWidth / 2;
+
+  const el = document.createElement('div');
+  el.className = 'falling';
+  el.textContent = direction.symbol;
+  el.dataset.direction = direction.name;
+  el.style.left = x + 'px';
+  el.style.top = -ARROW_SIZE + 'px';
+  side.appendChild(el);
+
+  list.push({ el, y: -ARROW_SIZE, direction: direction.name });
+}
+
+function updateGame(now) {
+  if (!state.running) return;
+  const dt = (now - state.lastFrame) / 1000;
+  state.lastFrame = now;
+  updateArrows(state.arrows1, side1, dt);
+  updateArrows(state.arrows2, side2, dt);
+  requestAnimationFrame(updateGame);
+}
+
+function updateArrows(list, side, dt) {
+  const zoneTop = side.clientHeight - HIT_ZONE_BOTTOM - HIT_ZONE_HEIGHT;
+  const zoneBottom = side.clientHeight - HIT_ZONE_BOTTOM;
+
+  for (let i = list.length - 1; i >= 0; i--) {
+    const arrow = list[i];
+    arrow.y += state.currentSpeed.fallSpeed * dt;
+    arrow.el.style.top = arrow.y + 'px';
+
+    const centerY = arrow.y + ARROW_SIZE / 2;
+    arrow.el.classList.toggle('ready', centerY >= zoneTop && centerY <= zoneBottom);
+
+    if (arrow.y > side.clientHeight + ARROW_SIZE) {
+      arrow.el.remove();
+      list.splice(i, 1);
+    }
+  }
+}
+
+function checkHit(player, directionName) {
+  if (!state.running) return;
+
+  const side = player === 1 ? side1 : side2;
+  const list = player === 1 ? state.arrows1 : state.arrows2;
+  const zoneTop = side.clientHeight - HIT_ZONE_BOTTOM - HIT_ZONE_HEIGHT;
+  const zoneBottom = side.clientHeight - HIT_ZONE_BOTTOM;
+
+  let best = null;
+  let bestDistance = Infinity;
+  const zoneCenter = (zoneTop + zoneBottom) / 2;
+
+  for (const arrow of list) {
+    if (arrow.direction !== directionName) continue;
+    const centerY = arrow.y + ARROW_SIZE / 2;
+    if (centerY >= zoneTop && centerY <= zoneBottom) {
+      const distance = Math.abs(centerY - zoneCenter);
+      if (distance < bestDistance) {
+        best = arrow;
+        bestDistance = distance;
+      }
+    }
+  }
+
+  if (best) {
+    best.el.remove();
+    list.splice(list.indexOf(best), 1);
+    addScore(player);
+  }
+}
+
+function addScore(player) {
+  if (player === 1) {
+    state.score1 += 10;
+    score1.textContent = state.score1;
+    flash(feedback1);
+  } else {
+    state.score2 += 10;
+    score2.textContent = state.score2;
+    flash(feedback2);
+  }
+}
+
+function flash(el) {
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+}
+
+document.addEventListener('keydown', e => {
+  const key = e.key;
+  const lower = key.toLowerCase();
+
+  const p1Direction = directions.find(d => d.p1 === key);
+  const p2Direction = directions.find(d => d.p2 === lower);
+
+  if (p1Direction) {
+    e.preventDefault();
+    checkHit(1, p1Direction.name);
+  }
+
+  if (p2Direction) {
+    e.preventDefault();
+    checkHit(2, p2Direction.name);
+  }
+});
+
+speedSelect.addEventListener('change', setSpeed);
+
+musicBtn.addEventListener('click', () => {
+  state.musicOn = !state.musicOn;
+  musicBtn.textContent = state.musicOn ? 'Music: On' : 'Music: Off';
+  if (!state.musicOn) music.pause();
+});
+
+testMusicBtn.addEventListener('click', () => {
+  state.musicOn = true;
+  musicBtn.textContent = 'Music: On';
+  music.pause();
+  music.load();
+  music.currentTime = 0;
+  music.volume = 0.55;
+  music.play().then(() => {
+    status.textContent = 'Music Works';
+  }).catch(() => {
+    status.textContent = 'Check Song File';
+  });
+});
+
+startBtn.addEventListener('click', () => {
+  if (!state.running && !state.countdown) startCountdown();
+});
+
+resetBtn.addEventListener('click', () => {
+  resetGame();
+});
+
+setSpeed();
+</script>
+</body>
+</html>
