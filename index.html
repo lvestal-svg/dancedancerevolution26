@@ -463,7 +463,11 @@ function wait(ms) {
 
 function loadSelectedSong() {
   music.pause();
-  music.src = state.selectedSong;
+
+  // Force the browser/GitHub Pages to load the newest selected file.
+  // This helps when a file was renamed, re-uploaded, or replaced.
+  music.src = './' + state.selectedSong + '?v=' + Date.now();
+
   music.load();
   music.currentTime = 0;
   music.volume = 0.55;
@@ -700,8 +704,9 @@ testMusicBtn.addEventListener('click', () => {
   loadSelectedSong();
   music.play().then(() => {
     status.textContent = 'Playing: ' + state.selectedSong;
-  }).catch(() => {
-    status.textContent = 'Check ' + state.selectedSong;
+  }).catch((error) => {
+    status.textContent = 'Could not play: ' + state.selectedSong;
+    console.log('Music error:', error, music.src);
   });
 });
 
