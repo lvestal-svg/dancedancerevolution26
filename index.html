@@ -375,6 +375,7 @@ const state = {
   running: false,
   countdown: false,
   musicOn: true,
+  selectedSong: 'bluey.mp3',
   currentSpeed: SPEEDS.normal,
   score1: 0,
   score2: 0,
@@ -391,13 +392,12 @@ const score2 = document.getElementById('score2');
 const timer = document.getElementById('timer');
 const status = document.getElementById('status');
 const speedLabel = document.getElementById('speedLabel');
-const songButtons = document.querySelectorAll('.song-btn');
-let selectedSong = 'bluey.mp3';
 const startBtn = document.getElementById('startBtn');
 const resetBtn = document.getElementById('resetBtn');
 const speedSelect = document.getElementById('speedSelect');
 const musicBtn = document.getElementById('musicBtn');
 const testMusicBtn = document.getElementById('testMusicBtn');
+const songButtons = document.querySelectorAll('.song-btn');
 const music = document.getElementById('gameMusic');
 const side1 = document.getElementById('side1');
 const side2 = document.getElementById('side2');
@@ -406,24 +406,16 @@ const feedback2 = document.getElementById('feedback2');
 
 music.volume = 0.55;
 
-music.addEventListener('error', () => {
-  status.textContent = 'Music File Not Found';
-});
-
-music.addEventListener('canplaythrough', () => {
-  if (!state.running && !state.countdown) {
-    status.textContent = 'Music Ready';
-  }
-});
-
 function setSpeed() {
-  state.currentSpeed = SPEEDS[speedSelect.value];
+  state.currentSpeed = SPEEDS[speedSelect.value] || SPEEDS.normal;
   speedLabel.textContent = 'Speed: ' + state.currentSpeed.label;
 }
 
 function resetGame() {
   clearInterval(state.spawnTimer);
   clearInterval(state.gameTimer);
+  state.spawnTimer = null;
+  state.gameTimer = null;
   clearArrows();
   removeOverlay(side1);
   removeOverlay(side2);
@@ -438,23 +430,12 @@ function resetGame() {
   timer.textContent = GAME_SECONDS;
   status.textContent = 'Ready';
   startBtn.disabled = false;
+  resetBtn.disabled = false;
   speedSelect.disabled = false;
   musicBtn.disabled = false;
   testMusicBtn.disabled = false;
-  songButtons.forEach(btn => {
-  if (btn.dataset.song === selectedSong) {
-    btn.style.background = '#f9a8d4';
-  }
-
-  btn.addEventListener('click', () => {
-    songButtons.forEach(b => b.style.background = '#fff');
-    btn.style.background = '#f9a8d4';
-    selectedSong = btn.dataset.song;
-    status.textContent = 'Song: ' + btn.textContent;
-  });
-});
-
-setSpeed();
+  songButtons.forEach(btn => btn.disabled = false);
+  setSpeed();
 }
 
 function clearArrows() {
@@ -476,7 +457,32 @@ function removeOverlay(side) {
   if (overlay) overlay.remove();
 }
 
-function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function loadSelectedSong() {
+  music.pause();
+  music.src = state.selectedSong;
+  music.load();
+  music.currentTime = 0;
+  music.volume = 0.55;
+}
+
+function startMusic() {
+  if (!state.musicOn) return;
+  loadSelectedSong();
+  music.play().then(() => {
+    status.textContent = 'Dance!';
+  }).catch(() => {
+    status.textContent = 'Check ' + state.selectedSong;
+  });
+}
+
+function stopMusic() {
+  music.pause();
+  music.currentTime = 0;
+}
 
 async function startCountdown() {
   resetGame();
@@ -485,9 +491,8 @@ async function startCountdown() {
   speedSelect.disabled = true;
   musicBtn.disabled = true;
   testMusicBtn.disabled = true;
+  songButtons.forEach(btn => btn.disabled = true);
 
-  // Start music immediately from the button click.
-  // Browsers often block audio if it waits until after the countdown.
   startMusic();
 
   for (let i = COUNTDOWN_SECONDS; i > 0; i--) {
@@ -508,40 +513,19 @@ async function startCountdown() {
   startGame();
 }
 
-function loadSelectedSong() {
-  music.pause();
-  music.src = selectedSong;
-  music.load();
-  music.currentTime = 0;
-  music.volume = 0.55;
-}
-
-function startMusic() {
-  if (!state.musicOn) return;
-  loadSelectedSong();
-  music.play().then(() => {
-    status.textContent = 'Dance!';
-  }).catch(() => {
-    status.textContent = 'Click Test Music';
-  });
-}
-
-function stopMusic() {
-  music.pause();
-  music.currentTime = 0;
-}
-
 function startGame() {
   state.running = true;
   state.seconds = GAME_SECONDS;
   timer.textContent = GAME_SECONDS;
   state.lastFrame = performance.now();
 
+  clearInterval(state.spawnTimer);
   state.spawnTimer = setInterval(() => {
     spawnArrow(1);
     spawnArrow(2);
   }, state.currentSpeed.spawnInterval);
 
+  clearInterval(state.gameTimer);
   state.gameTimer = setInterval(() => {
     state.seconds--;
     timer.textContent = state.seconds;
@@ -555,11 +539,14 @@ function endGame() {
   state.running = false;
   clearInterval(state.spawnTimer);
   clearInterval(state.gameTimer);
+  state.spawnTimer = null;
+  state.gameTimer = null;
   stopMusic();
   startBtn.disabled = false;
   speedSelect.disabled = false;
   musicBtn.disabled = false;
   testMusicBtn.disabled = false;
+  songButtons.forEach(btn => btn.disabled = false);
   status.textContent = 'Game Over';
 
   let message;
@@ -572,6 +559,8 @@ function endGame() {
 }
 
 function spawnArrow(player) {
+  if (!state.running) return;
+
   const side = player === 1 ? side1 : side2;
   const list = player === 1 ? state.arrows1 : state.arrows2;
   const direction = directions[Math.floor(Math.random() * directions.length)];
@@ -624,10 +613,10 @@ function checkHit(player, directionName) {
   const list = player === 1 ? state.arrows1 : state.arrows2;
   const zoneTop = side.clientHeight - HIT_ZONE_BOTTOM - HIT_ZONE_HEIGHT;
   const zoneBottom = side.clientHeight - HIT_ZONE_BOTTOM;
+  const zoneCenter = (zoneTop + zoneBottom) / 2;
 
   let best = null;
   let bestDistance = Infinity;
-  const zoneCenter = (zoneTop + zoneBottom) / 2;
 
   for (const arrow of list) {
     if (arrow.direction !== directionName) continue;
@@ -669,7 +658,6 @@ function flash(el) {
 document.addEventListener('keydown', e => {
   const key = e.key;
   const lower = key.toLowerCase();
-
   const p1Direction = directions.find(d => d.p1 === key);
   const p2Direction = directions.find(d => d.p2 === lower);
 
@@ -684,7 +672,21 @@ document.addEventListener('keydown', e => {
   }
 });
 
-speedSelect.addEventListener('change', setSpeed);
+songButtons.forEach(btn => {
+  if (btn.dataset.song === state.selectedSong) btn.style.background = '#f9a8d4';
+
+  btn.addEventListener('click', () => {
+    if (state.running || state.countdown) return;
+    songButtons.forEach(b => b.style.background = '#fff');
+    btn.style.background = '#f9a8d4';
+    state.selectedSong = btn.dataset.song;
+    status.textContent = 'Song: ' + btn.textContent;
+  });
+});
+
+speedSelect.addEventListener('change', () => {
+  if (!state.running && !state.countdown) setSpeed();
+});
 
 musicBtn.addEventListener('click', () => {
   state.musicOn = !state.musicOn;
@@ -697,9 +699,9 @@ testMusicBtn.addEventListener('click', () => {
   musicBtn.textContent = 'Music: On';
   loadSelectedSong();
   music.play().then(() => {
-    status.textContent = 'Playing: ' + selectedSong;
+    status.textContent = 'Playing: ' + state.selectedSong;
   }).catch(() => {
-    status.textContent = 'Check ' + selectedSong;
+    status.textContent = 'Check ' + state.selectedSong;
   });
 });
 
