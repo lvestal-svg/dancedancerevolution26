@@ -325,11 +325,11 @@
 
   <footer>
     <div id="songButtons" style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
-      <button class="song-btn" data-song="bluey.mp3">Bluey</button>
-      <button class="song-btn" data-song="firework.mp3">Firework</button>
-      <button class="song-btn" data-song="rickroll.mp3">Rick Roll</button>
-      <button class="song-btn" data-song="ymca.mp3">YMCA</button>
-      <button class="song-btn" data-song="lushlife.mp3">Lush Life</button>
+      <button type="button" class="song-btn" data-song="bluey.mp3">Bluey</button>
+      <button type="button" class="song-btn" data-song="firework.mp3">Firework</button>
+      <button type="button" class="song-btn" data-song="rickroll.mp3">Rick Roll</button>
+      <button type="button" class="song-btn" data-song="ymca.mp3">YMCA</button>
+      <button type="button" class="song-btn" data-song="lushlife.mp3">Lush Life</button>
     </div>
     <button id="startBtn">Start Game</button>
     <button id="resetBtn">Stop / Reset</button>
@@ -508,13 +508,17 @@ async function startCountdown() {
   startGame();
 }
 
-function startMusic() {
-  if (!state.musicOn) return;
-  music.src = selectedSong;
+function loadSelectedSong() {
   music.pause();
+  music.src = selectedSong;
   music.load();
   music.currentTime = 0;
   music.volume = 0.55;
+}
+
+function startMusic() {
+  if (!state.musicOn) return;
+  loadSelectedSong();
   music.play().then(() => {
     status.textContent = 'Dance!';
   }).catch(() => {
@@ -691,14 +695,11 @@ musicBtn.addEventListener('click', () => {
 testMusicBtn.addEventListener('click', () => {
   state.musicOn = true;
   musicBtn.textContent = 'Music: On';
-  music.pause();
-  music.load();
-  music.currentTime = 0;
-  music.volume = 0.55;
+  loadSelectedSong();
   music.play().then(() => {
-    status.textContent = 'Music Works';
+    status.textContent = 'Playing: ' + selectedSong;
   }).catch(() => {
-    status.textContent = 'Check Song File';
+    status.textContent = 'Check ' + selectedSong;
   });
 });
 
