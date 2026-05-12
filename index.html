@@ -159,7 +159,7 @@
     left: 0;
     right: 0;
     bottom: 92px;
-    height: 92px;
+    height: 150px;
     background: rgba(255,255,255,.25);
     border-top: 7px solid #fff;
     border-bottom: 7px solid #fff;
@@ -340,7 +340,7 @@
     <section class="side" id="side1">
       <div class="disco-ball"></div>
       <div class="side-title">Player 1</div>
-      <div class="lane-labels"><div>UP</div><div>RIGHT</div><div>DOWN</div><div>LEFT</div></div>
+      
       <div class="hit-zone"><span>HIT ZONE</span></div>
       <div class="feedback" id="feedback1">HIT!</div>
     </section>
@@ -348,7 +348,6 @@
     <section class="side" id="side2">
       <div class="disco-ball"></div>
       <div class="side-title">Player 2</div>
-      <div class="lane-labels"><div>UP</div><div>RIGHT</div><div>DOWN</div><div>LEFT</div></div>
       <div class="hit-zone"><span>HIT ZONE</span></div>
       <div class="feedback" id="feedback2">HIT!</div>
     </section>
@@ -361,7 +360,6 @@
       <option value="easy">Easy</option>
       <option value="normal" selected>Normal</option>
       <option value="challenge">Challenge</option>
-      <option value="chaos">Chaos</option>
     </select>
     <button id="musicBtn">Music: On</button>
     <button id="testMusicBtn">Test Song</button>
@@ -374,14 +372,13 @@
 const GAME_SECONDS = 60;
 const COUNTDOWN_SECONDS = 3;
 const HIT_ZONE_BOTTOM = 92;
-const HIT_ZONE_HEIGHT = 92;
+const HIT_ZONE_HEIGHT = 150;
 const ARROW_SIZE = 92;
 
 const SPEEDS = {
-  easy: { label: 'Easy', fallSpeed: 125, spawnInterval: 1250 },
-  normal: { label: 'Normal', fallSpeed: 165, spawnInterval: 1050 },
-  challenge: { label: 'Challenge', fallSpeed: 215, spawnInterval: 850 },
-  chaos: { label: 'Chaos', fallSpeed: 265, spawnInterval: 650 }
+  easy: { label: 'Easy', fallSpeed: 55, spawnInterval: 1700 },
+  normal: { label: 'Normal', fallSpeed: 95, spawnInterval: 1250 },
+  challenge: { label: 'Challenge', fallSpeed: 165, spawnInterval: 1050 }
 };
 
 const directions = [
@@ -581,8 +578,8 @@ function spawnArrow(player) {
   const side = player === 1 ? side1 : side2;
   const list = player === 1 ? state.arrows1 : state.arrows2;
   const direction = directions[Math.floor(Math.random() * directions.length)];
-  const laneWidth = side.clientWidth / 4;
-  const x = laneWidth * direction.lane + laneWidth / 2;
+  // Every arrow falls straight down the center of the player's box.
+  const x = side.clientWidth / 2;
 
   const el = document.createElement('div');
   el.className = 'falling';
